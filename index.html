@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Brilleproever for Synoptik-kataloget</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Synoptik live katalog</p>
+        <h1>Vaelg et stel. Proev det paa. Faerdig.</h1>
+        <p class="hero-text">
+          Hele Synoptik-kataloget bliver hentet ind lokalt, saa du kan browse frit og proeve alle stel paa webcam eller et uploadet billede.
+        </p>
+        <div class="hero-actions">
+          <button class="primary-button" id="jumpToCamera">Start med kamera</button>
+          <button class="secondary-button" id="jumpToCatalog">Aabn kataloget</button>
+        </div>
+      </div>
+      <div class="hero-card">
+        <div class="hero-card-stat">
+          <span class="stat-label">Katalog</span>
+          <strong>Alle stel hentes ind</strong>
+        </div>
+        <div class="hero-card-stat">
+          <span class="stat-label">Visning</span>
+          <strong>Minimal browser + try-on</strong>
+        </div>
+        <div class="hero-card-stat">
+          <span class="stat-label">Placering</span>
+          <strong>Face landmarks + finjustering</strong>
+        </div>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="stage-panel" id="stageSection">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Try-on</p>
+            <h2>Se brillerne paa dig selv</h2>
+          </div>
+          <button class="ghost-button" id="autoPlaceButton">Autoplacer igen</button>
+        </div>
+
+        <div class="stage-controls">
+          <label class="upload-pill">
+            <input type="file" id="photoInput" accept="image/*">
+            <span>Upload billede</span>
+          </label>
+          <button class="primary-button" id="cameraButton">Start kamera</button>
+          <button class="secondary-button" id="stopCameraButton">Stop kamera</button>
+          <button class="ghost-button" id="resetAdjustmentsButton">Nulstil justering</button>
+        </div>
+
+        <div class="stage-status" id="statusBanner">
+          Vaelg en brille fra kataloget, og upload derefter et billede eller start kameraet.
+        </div>
+
+        <div class="tryon-stage" id="tryonStage">
+          <div class="stage-media" id="stageMedia">
+            <video id="cameraFeed" playsinline muted></video>
+            <img id="photoPreview" alt="Uploadet ansigt">
+            <div class="placeholder" id="stagePlaceholder">
+              <p>Intet billede endnu</p>
+              <span>Upload et portraet eller giv adgang til webcam for at se brillerne paa.</span>
+            </div>
+            <div class="glasses-layer" id="glassesLayer">
+              <img id="glassesOverlay" alt="Valgt brilleoverlay">
+            </div>
+          </div>
+        </div>
+
+        <div class="selected-frame" id="selectedFrameCard">
+          <div class="selected-frame-copy">
+            <p class="eyebrow">Valgt stel</p>
+            <h3 id="selectedFrameTitle">Ingen brille valgt endnu</h3>
+            <p id="selectedFrameMeta">Vaelg et stel i kataloget for at aktivere overlaegningen.</p>
+          </div>
+          <a class="ghost-button link-button" id="selectedFrameLink" href="#" target="_blank" rel="noreferrer">Se hos Synoptik</a>
+        </div>
+
+        <div class="adjustments">
+          <div class="adjustment-header">
+            <div>
+              <p class="eyebrow">Finjustering</p>
+              <h3>Tilpas placeringen</h3>
+            </div>
+            <p class="adjustment-note">Tip: Du kan ogsaa trakke brillerne direkte med mus eller touch.</p>
+          </div>
+
+          <div class="slider-grid">
+            <label>
+              <span>Stoerrelse</span>
+              <input type="range" id="scaleSlider" min="0.65" max="1.55" step="0.01" value="1">
+              <output id="scaleValue">100%</output>
+            </label>
+            <label>
+              <span>Rotation</span>
+              <input type="range" id="rotationSlider" min="-25" max="25" step="0.1" value="0">
+              <output id="rotationValue">0 deg</output>
+            </label>
+            <label>
+              <span>Vandret offset</span>
+              <input type="range" id="xSlider" min="-180" max="180" step="1" value="0">
+              <output id="xValue">0 px</output>
+            </label>
+            <label>
+              <span>Lodret offset</span>
+              <input type="range" id="ySlider" min="-180" max="180" step="1" value="0">
+              <output id="yValue">0 px</output>
+            </label>
+            <label>
+              <span>Opacitet</span>
+              <input type="range" id="opacitySlider" min="0.5" max="1" step="0.01" value="0.96">
+              <output id="opacityValue">96%</output>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <aside class="catalog-panel" id="catalogSection">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Katalog</p>
+            <h2>Vaelg fra Synoptik</h2>
+          </div>
+          <div class="catalog-stats" id="catalogStats">Henter katalog...</div>
+        </div>
+
+        <form class="catalog-toolbar" id="searchForm">
+          <label class="search-field">
+            <span class="sr-only">Soeg efter brand eller model</span>
+            <input type="search" id="searchInput" placeholder="Soeg efter brand, model eller farve">
+          </label>
+          <label class="sort-field">
+            <span>Sorter</span>
+            <select id="sortSelect">
+              <option value="recommended">Anbefalet</option>
+              <option value="brandAsc">Brand A-Z</option>
+              <option value="titleAsc">Model A-Z</option>
+              <option value="priceAsc">Pris lavest foerst</option>
+              <option value="priceDesc">Pris hoejest foerst</option>
+            </select>
+          </label>
+          <button class="primary-button" type="submit">Filtrer</button>
+        </form>
+
+        <div class="loading-strip hidden" id="catalogLoading">Synoptik-kataloget bliver hentet ind. Det kan tage et oeje blik foerste gang.</div>
+        <div class="catalog-grid" id="catalogGrid"></div>
+
+        <div class="catalog-footer">
+          <button class="secondary-button hidden" id="prevPageButton" type="button">Forrige</button>
+          <p id="paginationLabel">Hele kataloget bliver laest ind</p>
+          <button class="secondary-button hidden" id="nextPageButton" type="button">Naeste</button>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <template id="productCardTemplate">
+    <article class="product-card">
+      <button class="product-select">
+        <div class="product-image-wrap">
+          <img class="product-image" alt="">
+        </div>
+        <div class="product-copy">
+          <p class="product-brand"></p>
+          <h3 class="product-title"></h3>
+          <p class="product-meta"></p>
+          <div class="product-footer">
+            <strong class="product-price"></strong>
+            <span class="product-cta">Proev paa mig</span>
+          </div>
+        </div>
+      </button>
+    </article>
+  </template>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
