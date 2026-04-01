@@ -269,6 +269,8 @@ button {
   border-radius: 18px;
   overflow: hidden;
   background: #ecebe7;
+  perspective: 1600px;
+  transform-style: preserve-3d;
 }
 
 .stage-media video,
@@ -312,12 +314,14 @@ button {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  perspective: 1600px;
+  transform-style: preserve-3d;
 }
 
 .glasses-layer img {
   position: absolute;
-  top: 0;
-  left: 0;
+  top: 50%;
+  left: 50%;
   width: auto;
   height: auto;
   max-width: none;
@@ -327,10 +331,18 @@ button {
   user-select: none;
   touch-action: none;
   filter: drop-shadow(0 12px 24px rgba(20, 32, 35, 0.16));
+  will-change: left, top, transform, filter, opacity;
+  backface-visibility: hidden;
 }
 
 .glasses-layer img.dragging {
   cursor: grabbing;
+}
+
+#cameraFeed.is-camera,
+.glasses-layer.is-camera {
+  transform: scaleX(-1);
+  transform-origin: center;
 }
 
 .selected-frame {
