@@ -788,7 +788,7 @@ function detectFromPhoto() {
       const result = state.faceLandmarker.detect(dom.photoPreview);
       processDetectionResult(result.faceLandmarks?.[0] || null);
       if (result.faceLandmarks?.length) {
-        setStatus("Brillen er autoplaceret paa dit billede. Brug sliders eller drag for sidste finish.");
+        setStatus("Brillen er autoplaceret på dit billede. Brug sliders eller træk for sidste finish.");
       } else {
         setStatus(
           "Jeg kunne ikke finde et ansigt i billedet. Du kan stadig placere brillerne manuelt.",
@@ -798,7 +798,7 @@ function detectFromPhoto() {
     })
     .catch((error) => {
       console.error(error);
-      setStatus("Ansigtsdetektionen fejlede paa billedet. Manuel justering er stadig mulig.", "warning");
+      setStatus("Ansigtsdetektionen fejlede på billedet. Manuel justering er stadig mulig.", "warning");
     });
 }
 
@@ -820,7 +820,7 @@ async function startCamera() {
     dom.cameraFeed.srcObject = state.cameraStream;
     await dom.cameraFeed.play();
     setActiveSource("camera");
-    setStatus("Live AR er aktiv. Hold ansigtet i billedet, saa foelger stellet dine bevaegelser.");
+    setStatus("Live AR er aktiv. Hold ansigtet i billedet, så følger stellet dine bevægelser.");
 
     if (state.faceReady) {
       await ensureVideoMode();
@@ -829,7 +829,7 @@ async function startCamera() {
   } catch (error) {
     console.error(error);
     setStatus(
-      "Kameraadgang blev afvist eller er ikke tilgaengelig. Proev i stedet at uploade et billede.",
+      "Kameraadgang blev afvist eller er ikke tilgængelig. Prøv i stedet at uploade et billede.",
       "warning"
     );
   }
@@ -975,7 +975,7 @@ function bindEvents() {
     if (state.currentSource === "photo") {
       detectFromPhoto();
     } else if (state.currentSource === "camera") {
-      setStatus("Holder kameraet live. Autoplaceringen opdateres loebende.");
+      setStatus("Holder kameraet live. Autoplaceringen opdateres løbende.");
     } else {
       positionGlasses();
     }
@@ -1026,6 +1026,11 @@ async function init() {
   bindEvents();
   dom.sortSelect.value = state.sort;
   updateSliderLabels();
+  updateCatalogMeta();
+  await Promise.all([fetchCatalog(), initFaceLandmarker()]);
+}
+
+init();
   updateCatalogMeta();
   await Promise.all([fetchCatalog(), initFaceLandmarker()]);
 }

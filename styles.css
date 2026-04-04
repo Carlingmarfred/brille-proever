@@ -108,8 +108,8 @@ button {
 .hero-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 28px;
+  gap: 16px;
+  margin-top: 32px;
 }
 
 .hero-card {
@@ -193,39 +193,50 @@ button {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  min-height: 48px;
-  padding: 0 18px;
-  border-radius: 999px;
+  min-height: 52px;
+  padding: 0 24px;
+  border-radius: 14px;
+  font-weight: 500;
   border: 1px solid transparent;
   text-decoration: none;
-  transition: transform 160ms ease, background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .primary-button {
   background: var(--accent);
   color: #ffffff;
-  box-shadow: none;
+  box-shadow: 0 4px 12px rgba(17, 24, 39, 0.1);
 }
 
-.primary-button:hover,
-.secondary-button:hover,
-.ghost-button:hover,
-.upload-pill:hover,
-.product-select:hover {
-  transform: translateY(-1px);
+.primary-button:hover {
+  background: #2a3347;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(17, 24, 39, 0.15);
 }
 
 .secondary-button,
 .upload-pill {
   background: #ffffff;
-  border-color: var(--border);
+  border-color: var(--border-strong);
   color: var(--text);
 }
 
+.secondary-button:hover,
+.upload-pill:hover {
+  border-color: var(--text);
+  background: #f9fafb;
+  transform: translateY(-2px);
+}
+
 .ghost-button {
-  background: transparent;
-  border-color: var(--border);
-  color: var(--muted);
+  background: rgba(17, 24, 39, 0.03);
+  border-color: transparent;
+  color: var(--text);
+}
+
+.ghost-button:hover {
+  background: rgba(17, 24, 39, 0.06);
+  transform: translateY(-2px);
 }
 
 .upload-pill {
@@ -249,6 +260,12 @@ button {
   border: 1px solid var(--border);
   color: var(--text);
   line-height: 1.5;
+  animation: slideDown 400ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .hidden {
@@ -399,11 +416,16 @@ button {
 
 .slider-grid label {
   display: grid;
-  gap: 8px;
-  padding: 14px 16px;
+  gap: 10px;
+  padding: 16px 20px;
   border-radius: 18px;
   background: #ffffff;
   border: 1px solid var(--border);
+  transition: border-color 200ms ease;
+}
+
+.slider-grid label:focus-within {
+  border-color: var(--text);
 }
 
 .slider-grid span {
@@ -468,27 +490,41 @@ button {
 .product-select {
   width: 100%;
   display: grid;
-  grid-template-columns: 112px minmax(0, 1fr);
-  gap: 14px;
-  padding: 12px;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 16px;
+  padding: 16px;
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 20px;
   background: #ffffff;
   text-align: left;
+  transition: all 240ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.product-select:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(17, 24, 39, 0.08);
 }
 
 .product-select.is-active {
-  border-color: rgba(17, 24, 39, 0.24);
-  box-shadow: 0 10px 20px rgba(17, 24, 39, 0.08);
+  border-color: var(--text);
+  background: #f9fafb;
+  border-width: 2px;
+  padding: 15px;
 }
 
 .product-image-wrap {
   display: grid;
   place-items: center;
-  min-height: 88px;
+  aspect-ratio: 1;
   border-radius: 14px;
   background: #f9fafb;
   overflow: hidden;
+  transition: transform 300ms ease;
+}
+
+.product-select:hover .product-image-wrap {
+  transform: scale(1.05);
 }
 
 .product-image {
@@ -546,6 +582,16 @@ button {
 .product-cta {
   color: var(--text);
   font-weight: 700;
+  font-size: 0.85rem;
+  padding: 6px 12px;
+  background: rgba(17, 24, 39, 0.05);
+  border-radius: 8px;
+  transition: all 200ms ease;
+}
+
+.product-select:hover .product-cta {
+  background: var(--text);
+  color: #ffffff;
 }
 
 .catalog-footer {
