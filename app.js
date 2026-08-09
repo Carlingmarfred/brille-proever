@@ -2,6 +2,12 @@ import {
   FaceLandmarker,
   FilesetResolver
 } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+import {
+  clamp,
+  getTrackedPose,
+  getRenderPose,
+  buildCatalogFailureMessage
+} from "./tryon-core.js";
 
 const MODEL_URL =
   "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
@@ -79,57 +85,6 @@ const dom = {
   opacityValue: document.querySelector("#opacityValue")
 };
 
-const SOURCE_EYE_POINTS = {
-  left: [33, 133, 159, 145],
-  right: [362, 263, 386, 374]
-};
-
-const TEMPLE_POINTS = {
-  left: [127, 234],
-  right: [356, 454]
-};
-
-function clamp(value, min, max) {
-  return Math.min(max, Math.max(min, value));
-}
-
-function lerp(start, end, amount) {
-  return start + (end - start) * amount;
-}
-
-function radiansToDegrees(radians) {
-  return (radians * 180) / Math.PI;
-}
-
-function subtractPoint(a, b) {
-  return {
-    x: a.x - b.x,
-    y: a.y - b.y,
-    z: (a.z ?? 0) - (b.z ?? 0)
-  };
-}
-
-function crossProduct(a, b) {
-  return {
-    x: a.y * b.z - a.z * b.y,
-    y: a.z * b.x - a.x * b.z,
-    z: a.x * b.y - a.y * b.x
-  };
-}
-
-function normalizeVector(vector) {
-  const length = Math.hypot(vector.x, vector.y, vector.z);
-  if (!length) {
-    return { x: 0, y: 0, z: 1 };
-  }
-
-  return {
-    x: vector.x / length,
-    y: vector.y / length,
-    z: vector.z / length
-  };
-}
-
 function setStatus(message, tone = "info") {
   dom.statusBanner.textContent = message;
   dom.statusBanner.style.background =
@@ -147,7 +102,7 @@ function updateCatalogMeta() {
     dom.paginationLabel.textContent =
       state.query.length > 0
         ? `Filter: "${state.query}"`
-        : "Hele Synoptik-kataloget er laest ind";
+        : "Hele Synoptik-kataloget er læst ind";
   }
   if (dom.prevPageButton) {
     dom.prevPageButton.disabled = true;
@@ -160,7 +115,7 @@ function updateCatalogMeta() {
 function updateSliderLabels() {
   const visibleOffsetX = state.currentSource === "camera" ? -state.overlay.offsetX : state.overlay.offsetX;
   dom.scaleValue.textContent = `${Math.round(state.overlay.scale * 100)}%`;
-  dom.rotationValue.textContent = `${state.overlay.rotation.toFixed(1)} deg`;
+  dom.rotationValue.textContent = `${state.overlay.rotation.toFixed(1)}°`;
   dom.xValue.textContent = `${Math.round(visibleOffsetX)} px`;
   dom.yValue.textContent = `${Math.round(state.overlay.offsetY)} px`;
   dom.opacityValue.textContent = `${Math.round(state.overlay.opacity * 100)}%`;
@@ -233,30 +188,6 @@ function getDisplayMetrics() {
   }
 
   return { width, height };
-}
-
-function averagePoints(points) {
-  return points.reduce(
-    (sum, point) => ({
-      x: sum.x + point.x,
-      y: sum.y + point.y,
-      z: (sum.z ?? 0) + (point.z ?? 0)
-    }),
-    { x: 0, y: 0, z: 0 }
-  );
-}
-
-function getAverageLandmark(landmarks, indices) {
-  const total = averagePoints(indices.map((index) => landmarks[index]));
-  return {
-    x: total.x / indices.length,
-    y: total.y / indices.length,
-    z: total.z / indices.length
-  };
-}
-
-function getDistancePx(a, b, width, height) {
-  return Math.hypot((a.x - b.x) * width, (a.y - b.y) * height);
 }
 
 function loadImageElement(sourceUrl) {
@@ -399,7 +330,7 @@ async function updateSelectedFrame(item) {
 
   if (!item) {
     dom.selectedFrameTitle.textContent = "Ingen brille valgt endnu";
-    dom.selectedFrameMeta.textContent = "Vaelg et stel i kataloget for at aktivere overlaegningen.";
+    dom.selectedFrameMeta.textContent = "Vælg et stel i kataloget for at aktivere overlægningen.";
     dom.selectedFrameLink.setAttribute("href", "#");
     await updateOverlayAsset(null);
     setActiveSource(state.currentSource);
@@ -412,13 +343,13 @@ async function updateSelectedFrame(item) {
   dom.selectedFrameLink.href = item.productUrl;
   dom.glassesOverlay.alt = item.title;
   dom.glassesOverlay.style.opacity = String(state.overlay.opacity);
-  setStatus("Forbereder AR-overlaeg for den valgte brille...");
+  setStatus("Forbereder AR-overlæg for den valgte brille...");
   await updateOverlayAsset(item);
   setActiveSource(state.currentSource);
   setStatus(
     state.currentSource === "camera"
-      ? "Live AR er klar. Bevaeg hovedet langsomt for at se stellet foelge dit ansigt."
-      : "AR-overlaegget er klar. Start kameraet eller upload et billede for at proeve stellet."
+      ? "Live AR er klar. Bevæg hovedet langsomt for at se stellet følge dit ansigt."
+      : "AR-overlægget er klar. Start kameraet eller upload et billede for at prøve stellet."
   );
   positionGlasses();
 }
@@ -494,7 +425,7 @@ function renderCatalog() {
   if (state.items.length === 0) {
     const empty = document.createElement("div");
     empty.className = "loading-strip";
-    empty.textContent = "Ingen stel matchede soegningen. Proev et andet brand, en farve eller en form.";
+    empty.textContent = "Ingen stel matchede søgningen. Prøv et andet brand, en farve eller en form.";
     dom.catalogGrid.append(empty);
     return;
   }
@@ -571,7 +502,7 @@ async function fetchCatalog() {
   } catch (error) {
     const failure = document.createElement("div");
     failure.className = "loading-strip";
-    failure.textContent = `${error.message} Tjek at serveren kan naa Synoptik-feedet.`;
+    failure.textContent = buildCatalogFailureMessage(error.message);
     dom.catalogGrid.append(failure);
     updateCatalogMeta();
   } finally {
@@ -581,7 +512,7 @@ async function fetchCatalog() {
 
 async function initFaceLandmarker() {
   try {
-    setStatus("Loader ansigtsdetektion, saa stellet kan blive autoplaceret...");
+    setStatus("Indlæser ansigtsdetektion, så stellet kan blive autoplaceret...");
     const vision = await FilesetResolver.forVisionTasks(
       "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
     );
@@ -614,7 +545,7 @@ async function initFaceLandmarker() {
 
     state.faceReady = true;
     setStatus(
-      "Ansigtsdetektion er klar. Vaelg en brille, og upload derefter et billede eller start kameraet."
+      "Ansigtsdetektion er klar. Vælg en brille, og upload derefter et billede eller start kameraet."
     );
   } catch (error) {
     console.error(error);
@@ -640,76 +571,6 @@ async function ensureImageMode() {
   await state.faceLandmarker.setOptions({ runningMode: "IMAGE" });
 }
 
-function getTrackedPose(landmarks, width, height) {
-  const leftEye = getAverageLandmark(landmarks, SOURCE_EYE_POINTS.left);
-  const rightEye = getAverageLandmark(landmarks, SOURCE_EYE_POINTS.right);
-  const leftTemple = getAverageLandmark(landmarks, TEMPLE_POINTS.left);
-  const rightTemple = getAverageLandmark(landmarks, TEMPLE_POINTS.right);
-  const bridge = landmarks[168] || landmarks[6] || landmarks[4];
-  const forehead = landmarks[10] || bridge;
-  const chin = landmarks[152] || bridge;
-
-  const eyeDistancePx = getDistancePx(leftEye, rightEye, width, height);
-  const faceWidthPx = getDistancePx(leftTemple, rightTemple, width, height);
-  const frameWidth = Number(state.selectedFrame?.dimensions?.frameWidth || 125);
-  const widthRatio = clamp(frameWidth / 125, 0.85, 1.15);
-
-  const templeVector = subtractPoint(rightTemple, leftTemple);
-  const verticalVector = subtractPoint(chin, forehead);
-  const faceNormal = normalizeVector(crossProduct(templeVector, verticalVector));
-
-  const roll =
-    radiansToDegrees(
-      Math.atan2((rightEye.y - leftEye.y) * height, (rightEye.x - leftEye.x) * width)
-    ) + state.overlay.rotation;
-  const yaw = clamp(radiansToDegrees(Math.atan2(faceNormal.x, Math.abs(faceNormal.z) + 0.0001)), -32, 32);
-  const pitch = clamp(
-    -radiansToDegrees(Math.atan2(faceNormal.y, Math.abs(faceNormal.z) + 0.0001)),
-    -24,
-    24
-  );
-
-  const widthFromEyes = eyeDistancePx * 2.05 * widthRatio;
-  const widthFromFace = faceWidthPx * 0.98 * widthRatio;
-  const trackedWidth = widthFromEyes * 0.62 + widthFromFace * 0.38;
-
-  return {
-    centerX: ((leftEye.x + rightEye.x) / 2) * width,
-    centerY: ((bridge?.y ?? (leftEye.y + rightEye.y) / 2) * height) + trackedWidth * 0.06,
-    width: clamp(trackedWidth, width * 0.18, width * 0.82),
-    roll,
-    yaw: state.currentSource === "camera" ? -yaw : yaw,
-    pitch,
-    confidence: clamp(faceWidthPx / (width * 0.33), 0, 1)
-  };
-}
-
-function getRenderPose(targetPose) {
-  if (!targetPose) {
-    state.overlay.pose = null;
-    return null;
-  }
-
-  if (!state.overlay.pose) {
-    state.overlay.pose = { ...targetPose };
-    return state.overlay.pose;
-  }
-
-  const smoothAmount = state.currentSource === "camera" ? 0.26 : 0.7;
-  const previousPose = state.overlay.pose;
-  state.overlay.pose = {
-    centerX: lerp(previousPose.centerX, targetPose.centerX, smoothAmount),
-    centerY: lerp(previousPose.centerY, targetPose.centerY, smoothAmount),
-    width: lerp(previousPose.width, targetPose.width, smoothAmount),
-    roll: lerp(previousPose.roll, targetPose.roll, smoothAmount),
-    yaw: lerp(previousPose.yaw, targetPose.yaw, smoothAmount),
-    pitch: lerp(previousPose.pitch, targetPose.pitch, smoothAmount),
-    confidence: lerp(previousPose.confidence, targetPose.confidence, smoothAmount)
-  };
-
-  return state.overlay.pose;
-}
-
 function positionGlasses() {
   if (!state.selectedFrame) {
     dom.glassesLayer.style.display = "none";
@@ -733,13 +594,21 @@ function positionGlasses() {
   };
 
   if (state.lastLandmarks) {
-    poseTarget = getTrackedPose(state.lastLandmarks, width, height);
+    poseTarget = getTrackedPose(state.lastLandmarks, width, height, {
+      frameWidth: Number(state.selectedFrame?.dimensions?.frameWidth || 125),
+      rotation: state.overlay.rotation,
+      currentSource: state.currentSource
+    });
   } else if (state.currentSource === "camera") {
     dom.glassesLayer.style.display = "none";
     return;
   }
 
-  const pose = getRenderPose(poseTarget);
+  const pose = getRenderPose(state.overlay.pose, poseTarget, state.currentSource);
+  if (!pose) {
+    return;
+  }
+  state.overlay.pose = pose;
   state.overlay.autoWidth = pose.width;
   state.overlay.autoAngle = pose.roll;
 
@@ -884,7 +753,7 @@ function handlePhotoUpload(event) {
     detectFromPhoto();
   };
   dom.photoPreview.src = objectUrl;
-  setStatus("Billedet er laest ind. Jeg matcher nu stellet mod dit ansigt...");
+  setStatus("Billedet er læst ind. Jeg matcher nu stellet mod dit ansigt...");
 }
 
 function bindDrag() {
@@ -969,7 +838,7 @@ function bindEvents() {
   dom.cameraButton.addEventListener("click", startCamera);
   dom.stopCameraButton.addEventListener("click", () => {
     stopCamera();
-    setStatus("Kameraet er stoppet. Upload et billede eller start kameraet igen, naar du vil fortsaette.");
+    setStatus("Kameraet er stoppet. Upload et billede eller start kameraet igen, når du vil fortsætte.");
   });
   dom.autoPlaceButton.addEventListener("click", () => {
     if (state.currentSource === "photo") {
@@ -1026,11 +895,6 @@ async function init() {
   bindEvents();
   dom.sortSelect.value = state.sort;
   updateSliderLabels();
-  updateCatalogMeta();
-  await Promise.all([fetchCatalog(), initFaceLandmarker()]);
-}
-
-init();
   updateCatalogMeta();
   await Promise.all([fetchCatalog(), initFaceLandmarker()]);
 }
